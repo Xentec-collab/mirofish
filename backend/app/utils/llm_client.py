@@ -100,6 +100,17 @@ class LLMClient:
         self.api_key = api_key or Config.LLM_API_KEY
         self.base_url = base_url or Config.LLM_BASE_URL
         self.model = model or Config.LLM_MODEL_NAME
+
+        # Map deprecated or overloaded Gemini models to stable working model
+        MODEL_ALIASES = {
+            "gemini-3.5-flash-lite": "gemini-3.1-flash-lite",
+            "gemini-2.5-flash": "gemini-3.1-flash-lite",
+            "gemini-2.5-flash-lite": "gemini-3.1-flash-lite",
+            "gemini-3.8-flash": "gemini-3.1-flash-lite",
+        }
+        if self.model in MODEL_ALIASES:
+            logger.info("Auto-switching model %s to %s", self.model, MODEL_ALIASES[self.model])
+            self.model = MODEL_ALIASES[self.model]
         
         if not self.api_key:
             raise ValueError("LLM_API_KEY 未配置")
@@ -135,11 +146,21 @@ class LLMClient:
                 )
             except Exception as error:
                 status_code = getattr(error, "status_code", None)
-                if status_code in {429, 500, 502, 503, 504} and attempt < max_retries - 1:
+                err_str = str(error).lower()
+                is_transient = (
+                    status_code in {429, 500, 502, 503, 504}
+                    or "503" in err_str
+                    or "high demand" in err_str
+                    or "overloaded" in err_str
+                    or "unavailable" in err_str
+                    or "timeout" in err_str
+                    or "connection" in err_str
+                )
+                if is_transient and attempt < max_retries - 1:
                     delay = (2 ** attempt) * 2 + random.uniform(0.5, 1.5)
                     logger.warning(
-                        "LLM provider error (HTTP %s) on attempt %d/%d; retrying in %.1fs...",
-                        status_code, attempt + 1, max_retries, delay
+                        "LLM provider transient error (%s) on attempt %d/%d; retrying in %.1fs...",
+                        error, attempt + 1, max_retries, delay
                     )
                     time.sleep(delay)
                     last_error = error

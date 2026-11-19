@@ -27,7 +27,14 @@ class Config:
     # LLM配置（统一使用OpenAI格式）
     LLM_API_KEY = os.environ.get('LLM_API_KEY')
     LLM_BASE_URL = os.environ.get('LLM_BASE_URL', 'https://api.openai.com/v1')
-    LLM_MODEL_NAME = os.environ.get('LLM_MODEL_NAME', 'gpt-4o-mini')
+    _raw_model = os.environ.get('LLM_MODEL_NAME', 'gemini-3.1-flash-lite')
+    _model_aliases = {
+        'gemini-3.5-flash-lite': 'gemini-3.1-flash-lite',
+        'gemini-2.5-flash': 'gemini-3.1-flash-lite',
+        'gemini-2.5-flash-lite': 'gemini-3.1-flash-lite',
+        'gemini-3.8-flash': 'gemini-3.1-flash-lite',
+    }
+    LLM_MODEL_NAME = _model_aliases.get(_raw_model, _raw_model)
     
     # Zep配置
     ZEP_API_KEY = os.environ.get('ZEP_API_KEY')
