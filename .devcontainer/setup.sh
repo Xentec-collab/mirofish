@@ -39,7 +39,7 @@ if [ -n "$LLM_API_KEY" ]; then
     cat <<EOF > .env
 LLM_API_KEY=$LLM_API_KEY
 LLM_BASE_URL=${LLM_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai/}
-LLM_MODEL_NAME=${LLM_MODEL_NAME:-gemini-3.5-flash-lite}
+LLM_MODEL_NAME=${LLM_MODEL_NAME:-gemini-3.1-flash-lite}
 ZEP_API_KEY=$ZEP_API_KEY
 EOF
 elif [ ! -f .env ] && [ -f .env.example ]; then

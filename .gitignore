@@ -61,4 +61,7 @@ data/
 
 # Executables
 *.exe
-cloudflared.exe
+cloudflared.exe
+tunnel.log
+start_remote.ps1
+

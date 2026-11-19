@@ -116,17 +116,38 @@ class LLMClient:
         temperature: Optional[float],
         max_tokens: Optional[int],
         response_format: Optional[Dict[str, Any]],
+        max_retries: int = 4,
     ) -> Any:
-        """Send one raw Chat Completions request through the compatibility layer."""
+        """Send one raw Chat Completions request through the compatibility layer with retries for transient errors."""
+        import time
+        import random
 
-        return create_chat_completion(
-            self.client,
-            model=self.model,
-            messages=messages,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            response_format=response_format,
-        )
+        last_error = None
+        for attempt in range(max_retries):
+            try:
+                return create_chat_completion(
+                    self.client,
+                    model=self.model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    response_format=response_format,
+                )
+            except Exception as error:
+                status_code = getattr(error, "status_code", None)
+                if status_code in {429, 500, 502, 503, 504} and attempt < max_retries - 1:
+                    delay = (2 ** attempt) * 2 + random.uniform(0.5, 1.5)
+                    logger.warning(
+                        "LLM provider error (HTTP %s) on attempt %d/%d; retrying in %.1fs...",
+                        status_code, attempt + 1, max_retries, delay
+                    )
+                    time.sleep(delay)
+                    last_error = error
+                    continue
+                raise
+
+        if last_error:
+            raise last_error
     
     def chat(
         self,
