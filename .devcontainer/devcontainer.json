@@ -1,0 +1,25 @@
+{
+  "name": "MiroFish Cloud",
+  "image": "mcr.microsoft.com/devcontainers/universal:latest",
+  "forwardPorts": [3000, 5001],
+  "portsAttributes": {
+    "3000": {
+      "label": "MiroFish Web UI",
+      "onAutoForward": "openBrowser",
+      "visibility": "public"
+    },
+    "5001": {
+      "label": "MiroFish Backend API",
+      "onAutoForward": "silent",
+      "visibility": "public"
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python"
+      ]
+    }
+  }
+}

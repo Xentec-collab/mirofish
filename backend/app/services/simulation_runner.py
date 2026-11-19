@@ -617,7 +617,7 @@ class SimulationRunner:
         return state
     
     @classmethod
-    def _monitor_simulation(cls, simulation_id: str, locale: str = 'zh'):
+    def _monitor_simulation(cls, simulation_id: str, locale: str = 'en'):
         """监控模拟进程，解析动作日志"""
         set_locale(locale)
         sim_dir = os.path.join(cls.RUN_STATE_DIR, simulation_id)
@@ -653,6 +653,24 @@ class SimulationRunner:
                 
                 # 更新状态
                 cls._save_run_state(state)
+
+                # 检查所有启用的平台是否均已完成全部模拟轮次
+                if cls._check_all_platforms_completed(state):
+                    logger.info(f"所有启用平台模拟均已完成，正在通知模拟进程退出: {simulation_id}")
+                    try:
+                        ipc_client = SimulationIPCClient(sim_dir)
+                        if ipc_client.check_env_alive():
+                            ipc_client.send_close_env(timeout=5)
+                    except Exception as e:
+                        logger.warning(f"发送 close_env 异常: {e}")
+
+                    try:
+                        process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        logger.info(f"等待进程退出超时，终止进程: {simulation_id}")
+                        cls._terminate_process(process, simulation_id, timeout=5)
+                    break
+
                 time.sleep(2)
             
             # 进程结束后，最后读取一次日志
@@ -690,7 +708,7 @@ class SimulationRunner:
                     if not manual_stop and monitor_error is not None:
                         desired_status = RunnerStatus.FAILED
                         error_message = str(monitor_error)
-                    elif not manual_stop and exit_code != 0:
+                    elif not manual_stop and exit_code is not None and exit_code != 0 and not cls._check_all_platforms_completed(state):
                         desired_status = RunnerStatus.FAILED
                         main_log_path = os.path.join(sim_dir, "simulation.log")
                         error_info = ""
