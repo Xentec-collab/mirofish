@@ -33,8 +33,16 @@ elif [ -f "$HOME/.local/bin/uv" ]; then
 fi
 cd ..
 
-# Copy .env.example if .env does not exist
-if [ ! -f .env ] && [ -f .env.example ]; then
+# Generate .env from Codespace Secrets if available, or fall back to .env.example
+if [ -n "$LLM_API_KEY" ]; then
+    echo "Creating .env from Codespace Secrets..."
+    cat <<EOF > .env
+LLM_API_KEY=$LLM_API_KEY
+LLM_BASE_URL=${LLM_BASE_URL:-https://generativelanguage.googleapis.com/v1beta/openai/}
+LLM_MODEL_NAME=${LLM_MODEL_NAME:-gemini-3.5-flash-lite}
+ZEP_API_KEY=$ZEP_API_KEY
+EOF
+elif [ ! -f .env ] && [ -f .env.example ]; then
     echo "Creating .env from .env.example..."
     cp .env.example .env
 fi
